@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MAGMA SHOW PARIS</string>
+    <string name="title_activity_main">MAGMA SHOW PARIS</string>
+    <string name="package_name">com.magmashow.paris</string>
+    <string name="custom_url_scheme">com.magmashow.paris</string>
+</resources>
