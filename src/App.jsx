@@ -4,17 +4,17 @@ import "./App.css";
 const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
-function App() {
+export default function App() {
   const [shows, setShows] = useState([]);
   const [files, setFiles] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
-    load();
+    loadShows();
   }, []);
 
-  async function load() {
+  async function loadShows() {
     const res = await fetch(`${API}?action=getPrestations`);
     const json = await res.json();
     setShows(Array.isArray(json) ? json : []);
@@ -36,14 +36,14 @@ function App() {
     return name?.toLowerCase().includes(".mp3");
   }
 
-  function isVideo(name) {
+  function isMp4(name) {
     return name?.toLowerCase().includes(".mp4");
   }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0b0716", color: "white" }}>
 
-      {/* LEFT */}
+      {/* MENU */}
       <div style={{ width: 220, padding: 20, borderRight: "1px solid #333" }}>
         <h3>MAGMA SHOW</h3>
 
@@ -51,12 +51,12 @@ function App() {
           Spectacles
         </button>
 
-        <button onClick={load}>
+        <button onClick={loadShows}>
           Rafraîchir
         </button>
       </div>
 
-      {/* RIGHT */}
+      {/* CONTENT */}
       <div style={{ flex: 1, padding: 20 }}>
 
         {!currentShow && (
@@ -67,9 +67,9 @@ function App() {
                 onClick={() => openShow(s.name)}
                 style={{
                   padding: 10,
-                  cursor: "pointer",
-                  background: "#1a1430",
                   marginBottom: 8,
+                  background: "#1a1430",
+                  cursor: "pointer",
                   borderRadius: 6
                 }}
               >
@@ -87,21 +87,18 @@ function App() {
 
             <h2>{currentShow}</h2>
 
-            {/* PLAYER SIMPLE */}
+            {/* PLAYER SIMPLE NATIF */}
             {selectedFile && (
-              <div style={{ marginBottom: 20, background: "#1a1430", padding: 10 }}>
+              <div style={{ background: "#1a1430", padding: 10, marginBottom: 20 }}>
                 <h3>{selectedFile.name}</h3>
 
                 {isMp3(selectedFile.name) && (
-                  <audio
-                    controls
-                    autoPlay
-                    style={{ width: "100%" }}
-                    src={selectedFile.url}
-                  />
+                  <audio controls autoPlay style={{ width: "100%" }}>
+                    <source src={selectedFile.url} />
+                  </audio>
                 )}
 
-                {isVideo(selectedFile.name) && (
+                {isMp4(selectedFile.name) && (
                   <video controls style={{ width: "100%" }} src={selectedFile.url} />
                 )}
 
@@ -111,7 +108,7 @@ function App() {
               </div>
             )}
 
-            {/* FILE LIST */}
+            {/* LISTE */}
             {files.map((f, i) => (
               <div
                 key={i}
@@ -119,11 +116,10 @@ function App() {
                 style={{
                   padding: 10,
                   borderBottom: "1px solid #333",
-                  cursor: "pointer",
-                  color: isMp3(f.name) ? "#d6b35a" : "white"
+                  cursor: "pointer"
                 }}
               >
-                {isMp3(f.name) ? "🎵" : isVideo(f.name) ? "🎬" : "📄"} {f.name}
+                {isMp3(f.name) ? "🎵" : isMp4(f.name) ? "🎬" : "📄"} {f.name}
               </div>
             ))}
           </>
@@ -132,5 +128,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
