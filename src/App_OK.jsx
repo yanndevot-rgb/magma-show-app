@@ -1,4 +1,4 @@
-
+const API_URL = "https://script.google.com/macros/s/TON_API/exec";
 import { useEffect, useState } from "react";
 import "./App.css";
 
