@@ -9,7 +9,7 @@ export default function App() {
   const [selectedPrestation, setSelectedPrestation] = useState(null);
 
   const [files, setFiles] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     loadPrestations();
@@ -29,22 +29,16 @@ export default function App() {
 
     setFiles(json || []);
     setSelectedPrestation(name);
-    setSelectedFile(null);
+    setPreview(null);
   }
 
-  // =========================
-  // DOWNLOAD UNIVERSAL DRIVE
-  // =========================
   function downloadFile(file) {
     if (!file?.url) return;
 
     const match = file.url.match(/\/d\/([^/]+)/);
     const id = match ? match[1] : null;
 
-    if (!id) {
-      alert("Lien invalide Drive");
-      return;
-    }
+    if (!id) return alert("Lien invalide Drive");
 
     const url =
       "https://drive.google.com/uc?export=download&id=" + id;
@@ -52,82 +46,56 @@ export default function App() {
     window.open(url, "_blank");
   }
 
-  // =========================
-  // RENDER FILE LOGIC (IMPORTANT)
-  // =========================
-  function renderFile(file) {
+  function renderPreview(file) {
     if (!file) return null;
 
     const name = file.name?.toLowerCase();
 
-    // AUDIO
-    if (name.endsWith(".mp3")) {
-      return (
-        <div style={{ marginTop: 20 }}>
-          <audio controls src={file.url} style={{ width: "100%" }} />
-
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Télécharger MP3
-          </button>
-        </div>
-      );
-    }
-
-    // VIDEO
-    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
-      return (
-        <div style={{ marginTop: 20 }}>
-          <video controls src={file.url} width="100%" />
-
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Télécharger vidéo
-          </button>
-        </div>
-      );
-    }
-
-    // DOCUMENTS (conduite / fiche / pdf / txt)
-    if (
-      name.includes("conduite") ||
-      name.includes("fiche") ||
-      name.endsWith(".pdf") ||
-      name.endsWith(".txt")
-    ) {
-      return (
-        <div style={{ marginTop: 20 }}>
-          <button onClick={() => window.open(file.url, "_blank")}>
-            📄 Ouvrir document
-          </button>
-
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Télécharger document
-          </button>
-        </div>
-      );
-    }
-
-    // IMAGE
-    if (
-      name.endsWith(".jpg") ||
-      name.endsWith(".png")
-    ) {
-      return (
-        <div style={{ marginTop: 20 }}>
-          <img src={file.url} style={{ maxWidth: "100%" }} />
-
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Télécharger image
-          </button>
-        </div>
-      );
-    }
-
-    // FALLBACK
     return (
-      <div>
-        <a href={file.url} target="_blank">
-          Ouvrir fichier
-        </a>
+      <div className="modal">
+        <div className="modalContent">
+
+          <h3>{file.name}</h3>
+
+          {/* AUDIO */}
+          {name.endsWith(".mp3") && (
+            <audio controls src={file.url} style={{ width: "100%" }} />
+          )}
+
+          {/* VIDEO */}
+          {(name.endsWith(".mp4") || name.endsWith(".mkv")) && (
+            <video controls src={file.url} width="100%" />
+          )}
+
+          {/* PDF / TEXTE / CONDUITE / FICHE */}
+          {(name.includes("conduite") ||
+            name.includes("fiche") ||
+            name.endsWith(".pdf") ||
+            name.endsWith(".txt")) && (
+            <iframe
+              src={file.url}
+              width="100%"
+              height="500px"
+              title="document"
+            />
+          )}
+
+          {/* IMAGE */}
+          {(name.endsWith(".jpg") || name.endsWith(".png")) && (
+            <img src={file.url} style={{ maxWidth: "100%" }} />
+          )}
+
+          <div style={{ marginTop: 10 }}>
+            <button onClick={() => downloadFile(file)}>
+              ⬇ Télécharger
+            </button>
+
+            <button onClick={() => setPreview(null)}>
+              Fermer
+            </button>
+          </div>
+
+        </div>
       </div>
     );
   }
@@ -137,6 +105,10 @@ export default function App() {
 
       {/* SIDEBAR */}
       <aside className="sidebar">
+        <div style={{ color: "white", padding: 10 }}>
+          MAGMA SHOW
+        </div>
+
         <button onClick={() => setSelectedPrestation(null)}>
           Spectacles
         </button>
@@ -149,7 +121,7 @@ export default function App() {
       {/* MAIN */}
       <main className="content">
 
-        {/* LISTE SPECTACLES */}
+        {/* HOME */}
         {!selectedPrestation && (
           <div>
             <h2>Spectacles</h2>
@@ -158,7 +130,11 @@ export default function App() {
               <div
                 key={i}
                 onClick={() => openPrestation(p.name)}
-                style={{ cursor: "pointer", padding: 10 }}
+                style={{
+                  cursor: "pointer",
+                  padding: 12,
+                  borderBottom: "1px solid #333"
+                }}
               >
                 🎭 {p.name}
               </div>
@@ -166,7 +142,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW PRESTATION */}
+        {/* FILE VIEW */}
         {selectedPrestation && (
           <div>
 
@@ -176,10 +152,10 @@ export default function App() {
 
             <h2>{selectedPrestation}</h2>
 
-            {/* FILE VIEWER */}
-            {selectedFile && renderFile(selectedFile)}
+            {/* PREVIEW */}
+            {preview && renderPreview(preview)}
 
-            {/* LIST FILES */}
+            {/* FILE LIST */}
             {files.map((f, i) => (
               <div
                 key={i}
@@ -188,9 +164,14 @@ export default function App() {
                   borderBottom: "1px solid #333",
                   cursor: "pointer"
                 }}
-                onClick={() => setSelectedFile(f)}
               >
-                {f.name}
+                <div onClick={() => setPreview(f)}>
+                  {f.name}
+                </div>
+
+                <button onClick={() => downloadFile(f)}>
+                  ⬇ Download
+                </button>
               </div>
             ))}
 
