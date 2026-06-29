@@ -13,8 +13,11 @@ export default async function handler(req, res) {
     return res.status(500).send("error fetching file");
   }
 
+  const buffer = await response.arrayBuffer();
+
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=3600");
 
-  response.body.pipe(res);
+  return res.send(Buffer.from(buffer));
 }
