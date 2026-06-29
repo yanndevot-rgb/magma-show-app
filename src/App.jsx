@@ -4,32 +4,17 @@ import "./App.css";
 const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
-function getDriveId(url) {
-  try {
-    return url.split("/d/")[1].split("/")[0];
-  } catch {
-    return null;
-  }
-}
-
-function getStreamUrl(url) {
-  const id = getDriveId(url);
-  if (!id) return null;
-
-  return `https://TON-PROJET.vercel.app/api/stream?id=${id}`;
-}
-
-export default function App() {
+function App() {
   const [shows, setShows] = useState([]);
   const [files, setFiles] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-  const [currentAudio, setCurrentAudio] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
-    loadShows();
+    load();
   }, []);
 
-  async function loadShows() {
+  async function load() {
     const res = await fetch(`${API}?action=getPrestations`);
     const json = await res.json();
     setShows(Array.isArray(json) ? json : []);
@@ -44,30 +29,15 @@ export default function App() {
 
     setFiles(Array.isArray(json) ? json : []);
     setCurrentShow(name);
-    stopAudio();
-  }
-
-  function stopAudio() {
-    if (currentAudio) {
-      currentAudio.pause();
-      setCurrentAudio(null);
-    }
-  }
-
-  function playMp3(file) {
-    stopAudio();
-
-    const url = getStreamUrl(file.url);
-    if (!url) return;
-
-    const audio = new Audio(url);
-    audio.play();
-
-    setCurrentAudio(audio);
+    setSelectedFile(null);
   }
 
   function isMp3(name) {
     return name?.toLowerCase().includes(".mp3");
+  }
+
+  function isVideo(name) {
+    return name?.toLowerCase().includes(".mp4");
   }
 
   return (
@@ -81,7 +51,7 @@ export default function App() {
           Spectacles
         </button>
 
-        <button onClick={loadShows}>
+        <button onClick={load}>
           Rafraîchir
         </button>
       </div>
@@ -117,30 +87,43 @@ export default function App() {
 
             <h2>{currentShow}</h2>
 
-            {/* STOP BUTTON */}
-            {currentAudio && (
-              <button onClick={stopAudio} style={{ marginBottom: 10 }}>
-                ⏹ Stop
-              </button>
+            {/* PLAYER SIMPLE */}
+            {selectedFile && (
+              <div style={{ marginBottom: 20, background: "#1a1430", padding: 10 }}>
+                <h3>{selectedFile.name}</h3>
+
+                {isMp3(selectedFile.name) && (
+                  <audio
+                    controls
+                    autoPlay
+                    style={{ width: "100%" }}
+                    src={selectedFile.url}
+                  />
+                )}
+
+                {isVideo(selectedFile.name) && (
+                  <video controls style={{ width: "100%" }} src={selectedFile.url} />
+                )}
+
+                <button onClick={() => setSelectedFile(null)}>
+                  Fermer
+                </button>
+              </div>
             )}
 
             {/* FILE LIST */}
             {files.map((f, i) => (
               <div
                 key={i}
-                onClick={() => {
-                  if (isMp3(f.name)) {
-                    playMp3(f);
-                  }
-                }}
+                onClick={() => setSelectedFile(f)}
                 style={{
                   padding: 10,
                   borderBottom: "1px solid #333",
-                  cursor: isMp3(f.name) ? "pointer" : "default",
-                  color: isMp3(f.name) ? "#d6b35a" : "#aaa"
+                  cursor: "pointer",
+                  color: isMp3(f.name) ? "#d6b35a" : "white"
                 }}
               >
-                🎵 {f.name}
+                {isMp3(f.name) ? "🎵" : isVideo(f.name) ? "🎬" : "📄"} {f.name}
               </div>
             ))}
           </>
@@ -149,3 +132,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;
