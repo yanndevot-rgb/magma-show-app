@@ -1,24 +1,15 @@
 import { useEffect, useState, useRef } from "react";
-import "./App.css";
 
 const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
-function getUrl(file) {
+function toDirect(url) {
   try {
-    const id = file.url.split("/d/")[1].split("/")[0];
+    const id = url.split("/d/")[1].split("/")[0];
     return `https://drive.google.com/uc?export=download&id=${id}`;
   } catch {
-    return file.url;
+    return url;
   }
-}
-
-function getType(name = "") {
-  const n = name.toLowerCase();
-  if (n.endsWith(".mp3")) return "audio";
-  if (n.endsWith(".mp4") || n.endsWith(".mkv")) return "video";
-  if (n.includes(".jpg") || n.includes(".png")) return "image";
-  return "doc";
 }
 
 export default function App() {
@@ -26,11 +17,7 @@ export default function App() {
   const [files, setFiles] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
 
-  const [currentSrc, setCurrentSrc] = useState(null);
-  const [currentType, setCurrentType] = useState(null);
-  const [currentName, setCurrentName] = useState("");
-
-  const videoRef = useRef(null);
+  const [currentAudio, setCurrentAudio] = useState(null);
   const audioRef = useRef(null);
 
   useEffect(() => {
@@ -47,51 +34,49 @@ export default function App() {
     const res = await fetch(
       `${API}?action=getFiles&show=${encodeURIComponent(name)}`
     );
+
     const json = await res.json();
 
     setFiles(Array.isArray(json) ? json : []);
     setCurrentShow(name);
 
-    stopAll();
+    stopAudio();
   }
 
-  function stopAll() {
-    if (audioRef.current) audioRef.current.pause();
-    if (videoRef.current) videoRef.current.pause();
-    setCurrentSrc(null);
-    setCurrentType(null);
-    setCurrentName("");
+  function stopAudio() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setCurrentAudio(null);
   }
 
-  function playFile(file) {
-    const type = getType(file.name);
-    const url = getUrl(file);
+  function play(file) {
+    const url = toDirect(file.url);
 
-    setCurrentType(type);
-    setCurrentSrc(url);
-    setCurrentName(file.name);
+    stopAudio();
 
-    setTimeout(() => {
-      if (type === "audio" && audioRef.current) {
-        audioRef.current.play().catch(() => {});
-      }
-      if (type === "video" && videoRef.current) {
-        videoRef.current.play().catch(() => {});
-      }
-    }, 200);
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    audio.play().catch(() => {
+      console.log("Lecture bloquée");
+    });
+
+    setCurrentAudio(file.name);
   }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0b0716", color: "white" }}>
 
-      {/* LEFT */}
+      {/* MENU */}
       <div style={{ width: 220, padding: 20, borderRight: "1px solid #333" }}>
         <h3>MAGMA SHOW</h3>
 
         <button onClick={() => {
           setCurrentShow(null);
           setFiles([]);
-          stopAll();
+          stopAudio();
         }}>
           Spectacles
         </button>
@@ -101,36 +86,10 @@ export default function App() {
         </button>
       </div>
 
-      {/* RIGHT */}
+      {/* CONTENT */}
       <div style={{ flex: 1, padding: 20 }}>
 
-        {/* PLAYER GLOBAL UNIQUE */}
-        {currentSrc && (
-          <div style={{
-            background: "#1a1430",
-            padding: 15,
-            marginBottom: 20,
-            borderRadius: 10
-          }}>
-            <h3>{currentName}</h3>
-
-            {currentType === "audio" && (
-              <audio ref={audioRef} controls style={{ width: "100%" }}>
-                <source src={currentSrc} />
-              </audio>
-            )}
-
-            {currentType === "video" && (
-              <video ref={videoRef} controls style={{ width: "100%" }}>
-                <source src={currentSrc} />
-              </video>
-            )}
-
-            <button onClick={stopAll}>Fermer</button>
-          </div>
-        )}
-
-        {/* SHOW LIST */}
+        {/* LIST SHOWS */}
         {!currentShow && (
           <>
             {shows.map((s, i) => (
@@ -140,8 +99,8 @@ export default function App() {
                 style={{
                   padding: 10,
                   marginBottom: 8,
-                  cursor: "pointer",
-                  background: "#1a1430"
+                  background: "#1a1430",
+                  cursor: "pointer"
                 }}
               >
                 🎭 {s.name}
@@ -150,7 +109,7 @@ export default function App() {
           </>
         )}
 
-        {/* FILE LIST */}
+        {/* SHOW VIEW */}
         {currentShow && (
           <>
             <button onClick={() => setCurrentShow(null)}>
@@ -159,20 +118,41 @@ export default function App() {
 
             <h2>{currentShow}</h2>
 
+            {currentAudio && (
+              <div style={{
+                background: "#1a1430",
+                padding: 15,
+                marginBottom: 20
+              }}>
+                🎵 Lecture : {currentAudio}
+
+                <div style={{ marginTop: 10 }}>
+                  <button onClick={() => audioRef.current?.play()}>
+                    Play
+                  </button>
+
+                  <button onClick={() => audioRef.current?.pause()}>
+                    Pause
+                  </button>
+
+                  <button onClick={stopAudio}>
+                    Stop
+                  </button>
+                </div>
+              </div>
+            )}
+
             {files.map((f, i) => (
               <div
                 key={i}
-                onClick={() => playFile(f)}
+                onClick={() => play(f)}
                 style={{
                   padding: 10,
                   borderBottom: "1px solid #333",
                   cursor: "pointer"
                 }}
               >
-                {getType(f.name) === "audio" && "🎵 "}
-                {getType(f.name) === "video" && "🎬 "}
-                {getType(f.name) === "doc" && "📄 "}
-                {f.name}
+                🎵 {f.name}
               </div>
             ))}
           </>
