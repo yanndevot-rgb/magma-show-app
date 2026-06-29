@@ -1,50 +1,77 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
+/* =========================
+   MP3 URL FIX (Drive bypass)
+========================= */
+function getStreamUrl(url) {
+  try {
+    const id = url.split("/d/")[1].split("/")[0];
+    return `https://drive.google.com/uc?export=download&id=${id}`;
+  } catch {
+    return url;
+  }
+}
+
 export default function App() {
-  const [prestations, setPrestations] = useState([]);
+  const [shows, setShows] = useState([]);
   const [files, setFiles] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-  const [currentFile, setCurrentFile] = useState(null);
+
+  const audioRef = useRef(null);
+  const [currentTrack, setCurrentTrack] = useState(null);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     loadShows();
   }, []);
 
   async function loadShows() {
-    try {
-      const res = await fetch(`${API}?action=getPrestations`);
-      const json = await res.json();
-      setPrestations(Array.isArray(json) ? json : []);
-    } catch (e) {
-      console.error(e);
-    }
+    const res = await fetch(`${API}?action=getPrestations`);
+    const json = await res.json();
+    setShows(Array.isArray(json) ? json : []);
   }
 
   async function openShow(name) {
-    try {
-      const res = await fetch(
-        `${API}?action=getFiles&show=${encodeURIComponent(name)}`
-      );
-      const json = await res.json();
+    const res = await fetch(
+      `${API}?action=getFiles&show=${encodeURIComponent(name)}`
+    );
 
-      setFiles(Array.isArray(json) ? json : []);
-      setCurrentShow(name);
-      setCurrentFile(null);
-    } catch (e) {
-      console.error(e);
-    }
+    const json = await res.json();
+
+    setFiles(Array.isArray(json) ? json : []);
+    setCurrentShow(name);
   }
 
-  function getUrl(url) {
-    try {
-      const id = url.split("/d/")[1].split("/")[0];
-      return `https://drive.google.com/uc?export=preview&id=${id}`;
-    } catch {
-      return url;
+  function playTrack(file) {
+    const url = getStreamUrl(file.url);
+
+    setCurrentTrack({
+      name: file.name,
+      url
+    });
+
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play();
+        setPlaying(true);
+      }
+    }, 100);
+  }
+
+  function toggle() {
+    if (!audioRef.current) return;
+
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current.play();
+      setPlaying(true);
     }
   }
 
@@ -58,7 +85,6 @@ export default function App() {
         <button onClick={() => {
           setCurrentShow(null);
           setFiles([]);
-          setCurrentFile(null);
         }}>
           Spectacles
         </button>
@@ -71,27 +97,25 @@ export default function App() {
       {/* RIGHT */}
       <div style={{ flex: 1, padding: 20 }}>
 
-        {/* LIST SHOWS */}
         {!currentShow && (
           <>
-            {prestations.map((p, i) => (
+            {shows.map((s, i) => (
               <div
                 key={i}
-                onClick={() => openShow(p.name)}
+                onClick={() => openShow(s.name)}
                 style={{
                   padding: 10,
                   marginBottom: 8,
-                  cursor: "pointer",
-                  background: "#1a1430"
+                  background: "#1a1430",
+                  cursor: "pointer"
                 }}
               >
-                🎭 {p.name}
+                🎭 {s.name}
               </div>
             ))}
           </>
         )}
 
-        {/* SHOW */}
         {currentShow && (
           <>
             <button onClick={() => setCurrentShow(null)}>
@@ -100,42 +124,41 @@ export default function App() {
 
             <h2>{currentShow}</h2>
 
-            {/* PLAYER SIMPLE */}
-            {currentFile && (
+            {/* MINI PLAYER FIXE (Spotify style) */}
+            {currentTrack && (
               <div style={{
+                position: "fixed",
+                bottom: 20,
+                left: 240,
+                right: 20,
                 background: "#1a1430",
                 padding: 15,
-                marginBottom: 20
+                borderRadius: 10
               }}>
-                <h3>{currentFile.name}</h3>
+                <div>{currentTrack.name}</div>
 
-                {/* 🔥 SIMPLE AUDIO NATIF (IMPORTANT) */}
-                <audio controls autoPlay style={{ width: "100%" }}>
-                  <source src={getUrl(currentFile.url)} type="audio/mpeg" />
-                </audio>
+                <audio ref={audioRef} />
 
-                <button onClick={() => setCurrentFile(null)}>
-                  Fermer
+                <button onClick={toggle}>
+                  {playing ? "⏸ Pause" : "▶ Play"}
                 </button>
               </div>
             )}
 
-            {/* FILE LIST */}
-            {files
-              .filter(f => f.name?.toLowerCase().includes(".mp3"))
-              .map((f, i) => (
-                <div
-                  key={i}
-                  onClick={() => setCurrentFile(f)}
-                  style={{
-                    padding: 10,
-                    borderBottom: "1px solid #333",
-                    cursor: "pointer"
-                  }}
-                >
-                  {f.name}
-                </div>
-              ))}
+            {/* LIST FILES */}
+            {files.map((f, i) => (
+              <div
+                key={i}
+                onClick={() => playTrack(f)}
+                style={{
+                  padding: 10,
+                  borderBottom: "1px solid #333",
+                  cursor: "pointer"
+                }}
+              >
+                🎵 {f.name}
+              </div>
+            ))}
           </>
         )}
       </div>
