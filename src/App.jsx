@@ -15,25 +15,33 @@ export default function App() {
   }, []);
 
   async function loadShows() {
-    const res = await fetch(API + "?action=getPrestations");
-    const json = await res.json();
-    setShows(json || []);
+    try {
+      const res = await fetch(API + "?action=getPrestations");
+      const json = await res.json();
+      setShows(json || []);
+    } catch (e) {
+      console.log("error shows", e);
+    }
   }
 
   async function openShow(name) {
-    const res = await fetch(API + "?action=getFiles&show=" + name);
-    const json = await res.json();
-    setFiles(json || []);
-    setShow(name);
-    setPreview(null);
+    try {
+      const res = await fetch(API + "?action=getFiles&show=" + name);
+      const json = await res.json();
+      setFiles(json || []);
+      setShow(name);
+      setPreview(null);
+    } catch (e) {
+      console.log("error files", e);
+    }
   }
 
-  // 🔥 IMPORTANT : PAS DE TRANSFORMATION DRIVE
+  // 🔥 IMPORTANT : on ne transforme rien pour tester stabilité
   function getUrl(url) {
     return url;
   }
 
-  function render(file) {
+  function renderFile(file) {
     const name = file.name.toLowerCase();
     const url = getUrl(file.url);
 
@@ -67,6 +75,7 @@ export default function App() {
           src={url}
           width="100%"
           height="600px"
+          style={{ border: "none" }}
         />
       );
     }
@@ -94,6 +103,7 @@ export default function App() {
 
       <main className="content">
 
+        {/* LISTE SHOWS */}
         {!show && (
           <div>
             <h2>Spectacles</h2>
@@ -110,6 +120,7 @@ export default function App() {
           </div>
         )}
 
+        {/* FILES */}
         {show && (
           <div>
 
@@ -119,16 +130,18 @@ export default function App() {
 
             <h2>{show}</h2>
 
+            {/* PREVIEW */}
             {preview && (
               <div style={{ marginBottom: 20 }}>
                 <h3>{preview.name}</h3>
-                {render(preview)}
+                {renderFile(preview)}
                 <button onClick={() => setPreview(null)}>
                   Fermer
                 </button>
               </div>
             )}
 
+            {/* LIST */}
             {files.map((f, i) => (
               <div
                 key={i}
