@@ -1,24 +1,29 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
+import "./App.css";
 
 const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
-function toDirect(url) {
+function getDriveId(url) {
   try {
-    const id = url.split("/d/")[1].split("/")[0];
-    return `https://drive.google.com/uc?export=download&id=${id}`;
+    return url.split("/d/")[1].split("/")[0];
   } catch {
-    return url;
+    return null;
   }
+}
+
+function getStreamUrl(url) {
+  const id = getDriveId(url);
+  if (!id) return null;
+
+  return `https://TON-PROJET.vercel.app/api/stream?id=${id}`;
 }
 
 export default function App() {
   const [shows, setShows] = useState([]);
   const [files, setFiles] = useState([]);
   const [currentShow, setCurrentShow] = useState(null);
-
   const [currentAudio, setCurrentAudio] = useState(null);
-  const audioRef = useRef(null);
 
   useEffect(() => {
     loadShows();
@@ -39,45 +44,40 @@ export default function App() {
 
     setFiles(Array.isArray(json) ? json : []);
     setCurrentShow(name);
-
     stopAudio();
   }
 
   function stopAudio() {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (currentAudio) {
+      currentAudio.pause();
+      setCurrentAudio(null);
     }
-    setCurrentAudio(null);
   }
 
-  function play(file) {
-    const url = toDirect(file.url);
-
+  function playMp3(file) {
     stopAudio();
 
+    const url = getStreamUrl(file.url);
+    if (!url) return;
+
     const audio = new Audio(url);
-    audioRef.current = audio;
+    audio.play();
 
-    audio.play().catch(() => {
-      console.log("Lecture bloquée");
-    });
+    setCurrentAudio(audio);
+  }
 
-    setCurrentAudio(file.name);
+  function isMp3(name) {
+    return name?.toLowerCase().includes(".mp3");
   }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#0b0716", color: "white" }}>
 
-      {/* MENU */}
+      {/* LEFT */}
       <div style={{ width: 220, padding: 20, borderRight: "1px solid #333" }}>
         <h3>MAGMA SHOW</h3>
 
-        <button onClick={() => {
-          setCurrentShow(null);
-          setFiles([]);
-          stopAudio();
-        }}>
+        <button onClick={() => setCurrentShow(null)}>
           Spectacles
         </button>
 
@@ -86,10 +86,9 @@ export default function App() {
         </button>
       </div>
 
-      {/* CONTENT */}
+      {/* RIGHT */}
       <div style={{ flex: 1, padding: 20 }}>
 
-        {/* LIST SHOWS */}
         {!currentShow && (
           <>
             {shows.map((s, i) => (
@@ -98,9 +97,10 @@ export default function App() {
                 onClick={() => openShow(s.name)}
                 style={{
                   padding: 10,
-                  marginBottom: 8,
+                  cursor: "pointer",
                   background: "#1a1430",
-                  cursor: "pointer"
+                  marginBottom: 8,
+                  borderRadius: 6
                 }}
               >
                 🎭 {s.name}
@@ -109,7 +109,6 @@ export default function App() {
           </>
         )}
 
-        {/* SHOW VIEW */}
         {currentShow && (
           <>
             <button onClick={() => setCurrentShow(null)}>
@@ -118,38 +117,27 @@ export default function App() {
 
             <h2>{currentShow}</h2>
 
+            {/* STOP BUTTON */}
             {currentAudio && (
-              <div style={{
-                background: "#1a1430",
-                padding: 15,
-                marginBottom: 20
-              }}>
-                🎵 Lecture : {currentAudio}
-
-                <div style={{ marginTop: 10 }}>
-                  <button onClick={() => audioRef.current?.play()}>
-                    Play
-                  </button>
-
-                  <button onClick={() => audioRef.current?.pause()}>
-                    Pause
-                  </button>
-
-                  <button onClick={stopAudio}>
-                    Stop
-                  </button>
-                </div>
-              </div>
+              <button onClick={stopAudio} style={{ marginBottom: 10 }}>
+                ⏹ Stop
+              </button>
             )}
 
+            {/* FILE LIST */}
             {files.map((f, i) => (
               <div
                 key={i}
-                onClick={() => play(f)}
+                onClick={() => {
+                  if (isMp3(f.name)) {
+                    playMp3(f);
+                  }
+                }}
                 style={{
                   padding: 10,
                   borderBottom: "1px solid #333",
-                  cursor: "pointer"
+                  cursor: isMp3(f.name) ? "pointer" : "default",
+                  color: isMp3(f.name) ? "#d6b35a" : "#aaa"
                 }}
               >
                 🎵 {f.name}
