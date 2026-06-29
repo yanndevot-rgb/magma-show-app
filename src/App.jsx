@@ -1,124 +1,141 @@
 import { useEffect, useState } from "react";
 
-const API =
+const API_URL =
   "https://script.google.com/macros/s/AKfycby13kgMgiryaUlTI9gyMJB54TIw36s-VjWyPauhDw7x0hmPKZHlUdIvYFCvNvpwWNru/exec";
 
-export default function App() {
+export default function Application() {
   const [shows, setShows] = useState([]);
-  const [show, setShow] = useState(null);
+  const [currentShow, setCurrentShow] = useState(null);
   const [files, setFiles] = useState([]);
-  const [preview, setPreview] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadShows();
   }, []);
 
   async function loadShows() {
-    const res = await fetch(API + "?action=getPrestations");
-    const json = await res.json();
-    setShows(json || []);
+    try {
+      setError("");
+
+      const res = await fetch(API_URL + "?action=getPrestations");
+      const json = await res.json();
+
+      console.log("API SHOWS:", json);
+
+      setShows(Array.isArray(json) ? json : json?.prestations || []);
+    } catch (e) {
+      setError("Erreur chargement spectacles");
+    }
   }
 
   async function openShow(name) {
-    const res = await fetch(API + "?action=getFiles&show=" + name);
-    const json = await res.json();
-    setFiles(json || []);
-    setShow(name);
-    setPreview(null);
+    try {
+      const res = await fetch(
+        API_URL + "?action=getFiles&show=" + encodeURIComponent(name)
+      );
+
+      const json = await res.json();
+
+      console.log("FILES:", json);
+
+      setFiles(Array.isArray(json) ? json : json?.files || []);
+      setCurrentShow(name);
+      setSelectedFile(null);
+    } catch (e) {
+      setError("Erreur chargement fichiers");
+    }
   }
 
-  // 🔥 AUCUNE TRANSFORMATION (comme avant)
-  function getUrl(url) {
-    return url;
-  }
+  function renderFile(file) {
+    if (!file?.url) return <div>URL manquante</div>;
 
-  function render(file) {
-    const name = file.name.toLowerCase();
-    const url = getUrl(file.url);
+    const url = file.url;
+    const name = (file.name || "").toLowerCase();
 
-    // AUDIO
+    // 🎵 AUDIO
     if (name.endsWith(".mp3")) {
-      return (
-        <audio controls src={url} style={{ width: "100%" }} />
-      );
+      return <audio controls src={url} style={{ width: "100%" }} />;
     }
 
-    // VIDEO
+    // 🎬 VIDEO
     if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
-      return (
-        <video controls src={url} style={{ width: "100%" }} />
-      );
+      return <video controls src={url} style={{ width: "100%" }} />;
     }
 
-    // DOC / TEXTE / CONDUITE
-    if (
-      name.includes("conduite") ||
-      name.includes("fiche") ||
-      name.endsWith(".pdf") ||
-      name.endsWith(".txt")
-    ) {
-      return (
-        <iframe
-          src={url}
-          style={{ width: "100%", height: "600px" }}
-        />
-      );
-    }
-
-    return <div>Format non supporté</div>;
+    // 📄 TEXTE / DOC / CONDUITE
+    return (
+      <iframe
+        src={url}
+        style={{ width: "100%", height: "600px", border: "none" }}
+      />
+    );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-
+    <div style={{ padding: 20, fontFamily: "Arial" }}>
       <h2>MAGMA SHOW</h2>
 
-      {!show ? (
-        shows.map((s, i) => (
-          <div
-            key={i}
-            onClick={() => openShow(s.name)}
-            style={{ cursor: "pointer", padding: 10 }}
-          >
-            🎭 {s.name}
-          </div>
-        ))
-      ) : (
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
+      {/* LISTE SPECTACLES */}
+      {!currentShow && (
         <div>
+          {shows.length === 0 && <p>Aucun spectacle</p>}
 
-          <button onClick={() => setShow(null)}>
-            ← Retour
-          </button>
+          {shows.map((s, i) => (
+            <div
+              key={i}
+              onClick={() => openShow(s.name)}
+              style={{
+                padding: 10,
+                cursor: "pointer",
+                borderBottom: "1px solid #ccc",
+              }}
+            >
+              🎭 {s.name}
+            </div>
+          ))}
+        </div>
+      )}
 
-          <h3>{show}</h3>
+      {/* LISTE FICHIERS */}
+      {currentShow && (
+        <div>
+          <button onClick={() => setCurrentShow(null)}>← Retour</button>
 
-          {preview && (
-            <div>
-              <h4>{preview.name}</h4>
-              {render(preview)}
-              <button onClick={() => setPreview(null)}>
+          <h3>{currentShow}</h3>
+
+          {/* PREVIEW */}
+          {selectedFile && (
+            <div style={{ marginBottom: 20 }}>
+              <h4>{selectedFile.name}</h4>
+              {renderFile(selectedFile)}
+
+              <button onClick={() => setSelectedFile(null)}>
                 Fermer
               </button>
             </div>
           )}
 
+          {/* FILE LIST */}
+          {files.length === 0 && <p>Aucun fichier</p>}
+
           {files.map((f, i) => (
             <div
               key={i}
-              onClick={() => setPreview(f)}
+              onClick={() => setSelectedFile(f)}
               style={{
                 padding: 10,
+                cursor: "pointer",
                 borderBottom: "1px solid #444",
-                cursor: "pointer"
               }}
             >
               {f.name}
             </div>
           ))}
-
         </div>
       )}
-
     </div>
   );
 }
