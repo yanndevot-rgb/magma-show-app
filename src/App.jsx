@@ -201,25 +201,63 @@ export default function App() {
 
             {/* LIST FILES */}
             <div>
-              {files.map((f, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: 10,
-                    borderBottom: "1px solid #333",
-                    cursor: "pointer"
-                  }}
-                  onClick={() => setSelectedFile(f)}
-                >
-                  {f.name}
-                </div>
-              ))}
-            </div>
+              {files.map((file, i) => {
 
-          </div>
-        )}
+  const name = file.name?.toLowerCase() || "";
 
-      </main>
+  const isAudio = name.endsWith(".mp3");
+  const isVideo = name.endsWith(".mp4") || name.endsWith(".mkv");
+  const isPdf = name.endsWith(".pdf");
+  const isText = name.endsWith(".txt");
+
+  const isDoc =
+    name.includes("conduite") ||
+    name.includes("fiche");
+
+  return (
+    <div key={i} className="songCard">
+
+      {/* NOM */}
+      <div
+        onClick={() => setSelectedFile(file)}
+        style={{ cursor: "pointer" }}
+      >
+        {file.name}
+      </div>
+
+      {/* AUDIO */}
+      {isAudio && (
+        <>
+          <audio controls src={file.url} />
+          <button onClick={() => downloadFile(file)}>
+            ⬇ MP3
+          </button>
+        </>
+      )}
+
+      {/* VIDEO */}
+      {isVideo && (
+        <>
+          <video controls src={file.url} width="100%" />
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Vidéo
+          </button>
+        </>
+      )}
+
+      {/* PDF / TEXTE / DOC */}
+      {(isPdf || isText || isDoc) && (
+        <>
+          <button onClick={() => window.open(file.url, "_blank")}>
+            📄 Ouvrir
+          </button>
+
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Télécharger
+          </button>
+        </>
+      )}
+
     </div>
   );
-}
+})}
