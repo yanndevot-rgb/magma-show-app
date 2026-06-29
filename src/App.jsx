@@ -1,93 +1,81 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API =
+const FILES_API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
 export default function App() {
   const [shows, setShows] = useState([]);
   const [show, setShow] = useState(null);
   const [files, setFiles] = useState([]);
-  const [preview, setPreview] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     loadShows();
   }, []);
 
   async function loadShows() {
-    const r = await fetch(API + "?action=getPrestations");
-    const j = await r.json();
-    setShows(j || []);
+    const res = await fetch(FILES_API + "?action=getPrestations");
+    const json = await res.json();
+    setShows(json || []);
   }
 
   async function openShow(name) {
-    const r = await fetch(API + "?action=getFiles&show=" + name);
-    const j = await r.json();
-    setFiles(j || []);
+    const res = await fetch(FILES_API + "?action=getFiles&show=" + name);
+    const json = await res.json();
+    setFiles(json || []);
     setShow(name);
-    setPreview(null);
+    setSelected(null);
   }
 
-  // 🔥 STREAM FIX MAGMA
-  function streamUrl(url) {
+  function getUrl(url) {
     const match = url?.match(/\/d\/([^/]+)/);
     const id = match ? match[1] : null;
-
     if (!id) return url;
-
     return `https://drive.google.com/uc?export=download&id=${id}`;
   }
 
-  function download(file) {
-    window.open(streamUrl(file.url), "_blank");
-  }
-
-  function render(file) {
-    if (!file) return null;
-
+  function renderFile(file) {
     const name = file.name.toLowerCase();
-    const url = streamUrl(file.url);
+    const url = getUrl(file.url);
 
-    return (
-      <div className="modal">
-        <div className="modalContent">
-
-          <h3>{file.name}</h3>
-
-          {/* AUDIO */}
-          {name.endsWith(".mp3") && (
-            <audio controls src={url} />
-          )}
-
-          {/* VIDEO */}
-          {(name.endsWith(".mp4") || name.endsWith(".mkv")) && (
-            <video controls src={url} width="100%" />
-          )}
-
-          {/* DOC */}
-          {(name.includes("conduite") ||
-            name.includes("fiche") ||
-            name.endsWith(".pdf") ||
-            name.endsWith(".txt")) && (
-            <iframe src={url} width="100%" height="500px" />
-          )}
-
-          {/* IMAGE */}
-          {(name.endsWith(".jpg") || name.endsWith(".png")) && (
-            <img src={url} style={{ maxWidth: "100%" }} />
-          )}
-
-          <button onClick={() => download(file)}>
-            ⬇ Télécharger
-          </button>
-
-          <button onClick={() => setPreview(null)}>
-            Fermer
-          </button>
-
+    // MP3
+    if (name.endsWith(".mp3")) {
+      return (
+        <div>
+          <audio controls src={url} style={{ width: "100%" }} />
         </div>
-      </div>
-    );
+      );
+    }
+
+    // VIDEO
+    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
+      return (
+        <video controls src={url} style={{ width: "100%" }} />
+      );
+    }
+
+    // TEXT / CONDUITE / PDF
+    if (
+      name.endsWith(".txt") ||
+      name.includes("conduite") ||
+      name.includes("fiche") ||
+      name.endsWith(".pdf")
+    ) {
+      return (
+        <iframe
+          src={url}
+          style={{ width: "100%", height: "500px" }}
+        />
+      );
+    }
+
+    // IMAGE
+    if (name.endsWith(".jpg") || name.endsWith(".png")) {
+      return <img src={url} style={{ maxWidth: "100%" }} />;
+    }
+
+    return <p>Format non supporté</p>;
   }
 
   return (
@@ -113,6 +101,7 @@ export default function App() {
               <div
                 key={i}
                 onClick={() => openShow(s.name)}
+                style={{ cursor: "pointer", margin: 10 }}
               >
                 🎭 {s.name}
               </div>
@@ -129,19 +118,33 @@ export default function App() {
 
             <h2>{show}</h2>
 
-            {preview && render(preview)}
+            {selected && (
+              <div className="preview">
+                <h3>{selected.name}</h3>
+
+                {renderFile(selected)}
+
+                <a href={getUrl(selected.url)} target="_blank">
+                  Télécharger
+                </a>
+
+                <button onClick={() => setSelected(null)}>
+                  Fermer
+                </button>
+              </div>
+            )}
 
             {files.map((f, i) => (
-              <div key={i} className="row">
-
-                <div onClick={() => setPreview(f)}>
-                  {f.name}
-                </div>
-
-                <button onClick={() => download(f)}>
-                  Download
-                </button>
-
+              <div
+                key={i}
+                style={{
+                  borderBottom: "1px solid #444",
+                  padding: 10,
+                  cursor: "pointer"
+                }}
+                onClick={() => setSelected(f)}
+              >
+                {f.name}
               </div>
             ))}
 
