@@ -28,38 +28,45 @@ export default function App() {
     setPreview(null);
   }
 
+  // 🔥 IMPORTANT : PAS DE TRANSFORMATION DRIVE
   function getUrl(url) {
-    const match = url?.match(/\/d\/([^/]+)/);
-    const id = match ? match[1] : null;
-    if (!id) return url;
-    return `https://drive.google.com/uc?export=download&id=${id}`;
+    return url;
   }
 
-  function renderFile(file) {
+  function render(file) {
     const name = file.name.toLowerCase();
     const url = getUrl(file.url);
 
-    // 🎧 AUDIO
+    // 🎧 MP3
     if (name.endsWith(".mp3")) {
-      return <audio controls src={url} style={{ width: "100%" }} />;
+      return (
+        <audio controls style={{ width: "100%" }}>
+          <source src={url} type="audio/mpeg" />
+        </audio>
+      );
     }
 
     // 🎬 VIDEO
     if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
-      return <video controls src={url} style={{ width: "100%" }} />;
+      return (
+        <video controls style={{ width: "100%" }}>
+          <source src={url} />
+        </video>
+      );
     }
 
     // 📄 TEXTE / PDF / CONDUITE
     if (
-      name.endsWith(".txt") ||
-      name.endsWith(".pdf") ||
       name.includes("conduite") ||
-      name.includes("fiche")
+      name.includes("fiche") ||
+      name.endsWith(".pdf") ||
+      name.endsWith(".txt")
     ) {
       return (
         <iframe
           src={url}
-          style={{ width: "100%", height: "600px" }}
+          width="100%"
+          height="600px"
         />
       );
     }
@@ -87,7 +94,6 @@ export default function App() {
 
       <main className="content">
 
-        {/* LISTE SPECTACLES */}
         {!show && (
           <div>
             <h2>Spectacles</h2>
@@ -104,7 +110,6 @@ export default function App() {
           </div>
         )}
 
-        {/* LISTE FICHIERS */}
         {show && (
           <div>
 
@@ -114,19 +119,16 @@ export default function App() {
 
             <h2>{show}</h2>
 
-            {/* PREVIEW SIMPLE */}
             {preview && (
-              <div className="preview">
+              <div style={{ marginBottom: 20 }}>
                 <h3>{preview.name}</h3>
-                {renderFile(preview)}
-
+                {render(preview)}
                 <button onClick={() => setPreview(null)}>
                   Fermer
                 </button>
               </div>
             )}
 
-            {/* LISTE */}
             {files.map((f, i) => (
               <div
                 key={i}
