@@ -33,7 +33,7 @@ export default function App() {
   }
 
   // =========================
-  // DOWNLOAD SIMPLE FILE
+  // DOWNLOAD UNIVERSAL DRIVE
   // =========================
   function downloadFile(file) {
     if (!file?.url) return;
@@ -41,7 +41,10 @@ export default function App() {
     const match = file.url.match(/\/d\/([^/]+)/);
     const id = match ? match[1] : null;
 
-    if (!id) return alert("Lien invalide");
+    if (!id) {
+      alert("Lien invalide Drive");
+      return;
+    }
 
     const url =
       "https://drive.google.com/uc?export=download&id=" + id;
@@ -50,22 +53,82 @@ export default function App() {
   }
 
   // =========================
-  // OPEN FILE (TEXT / VIDEO)
+  // RENDER FILE LOGIC (IMPORTANT)
   // =========================
-  function openFile(file) {
-    if (!file?.url) return;
-    window.open(file.url, "_blank");
-  }
+  function renderFile(file) {
+    if (!file) return null;
 
-  // =========================
-  // DOWNLOAD ALL (ZIP BACKEND)
-  // =========================
-  function downloadAll() {
-    window.open(
-      FILES_API +
-        "?action=downloadZip&show=" +
-        selectedPrestation,
-      "_blank"
+    const name = file.name?.toLowerCase();
+
+    // AUDIO
+    if (name.endsWith(".mp3")) {
+      return (
+        <div style={{ marginTop: 20 }}>
+          <audio controls src={file.url} style={{ width: "100%" }} />
+
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Télécharger MP3
+          </button>
+        </div>
+      );
+    }
+
+    // VIDEO
+    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
+      return (
+        <div style={{ marginTop: 20 }}>
+          <video controls src={file.url} width="100%" />
+
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Télécharger vidéo
+          </button>
+        </div>
+      );
+    }
+
+    // DOCUMENTS (conduite / fiche / pdf / txt)
+    if (
+      name.includes("conduite") ||
+      name.includes("fiche") ||
+      name.endsWith(".pdf") ||
+      name.endsWith(".txt")
+    ) {
+      return (
+        <div style={{ marginTop: 20 }}>
+          <button onClick={() => window.open(file.url, "_blank")}>
+            📄 Ouvrir document
+          </button>
+
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Télécharger document
+          </button>
+        </div>
+      );
+    }
+
+    // IMAGE
+    if (
+      name.endsWith(".jpg") ||
+      name.endsWith(".png")
+    ) {
+      return (
+        <div style={{ marginTop: 20 }}>
+          <img src={file.url} style={{ maxWidth: "100%" }} />
+
+          <button onClick={() => downloadFile(file)}>
+            ⬇ Télécharger image
+          </button>
+        </div>
+      );
+    }
+
+    // FALLBACK
+    return (
+      <div>
+        <a href={file.url} target="_blank">
+          Ouvrir fichier
+        </a>
+      </div>
     );
   }
 
@@ -103,7 +166,7 @@ export default function App() {
           </div>
         )}
 
-        {/* FILE VIEW */}
+        {/* VIEW PRESTATION */}
         {selectedPrestation && (
           <div>
 
@@ -113,151 +176,28 @@ export default function App() {
 
             <h2>{selectedPrestation}</h2>
 
-            {/* ZIP DOWNLOAD */}
-            <button
-              onClick={downloadAll}
-              style={{
-                margin: 10,
-                padding: 10,
-                background: "black",
-                color: "gold"
-              }}
-            >
-              ⬇ Télécharger TOUT (ZIP)
-            </button>
-
-            {/* PLAYER */}
-            {selectedFile && (
-              <div style={{ marginBottom: 20 }}>
-
-                <h3>{selectedFile.name}</h3>
-
-                {/* AUDIO */}
-                {selectedFile.name?.endsWith(".mp3") && (
-                  <>
-                    <audio controls src={selectedFile.url} />
-
-                    <button
-                      onClick={() => downloadFile(selectedFile)}
-                    >
-                      ⬇ Télécharger MP3
-                    </button>
-                  </>
-                )}
-
-                {/* VIDEO */}
-                {(selectedFile.name?.endsWith(".mp4") ||
-                  selectedFile.name?.endsWith(".mkv")) && (
-                  <>
-                    <video
-                      controls
-                      src={selectedFile.url}
-                      width="100%"
-                    />
-
-                    <button
-                      onClick={() => downloadFile(selectedFile)}
-                    >
-                      ⬇ Télécharger vidéo
-                    </button>
-                  </>
-                )}
-
-                {/* TEXTE / PDF */}
-                {(selectedFile.name?.endsWith(".txt") ||
-                  selectedFile.name?.endsWith(".pdf")) && (
-                  <>
-                    <button onClick={() => openFile(selectedFile)}>
-                      📄 Ouvrir
-                    </button>
-
-                    <button
-                      onClick={() => downloadFile(selectedFile)}
-                    >
-                      ⬇ Télécharger texte
-                    </button>
-                  </>
-                )}
-
-                {/* IMAGE */}
-                {(selectedFile.name?.endsWith(".jpg") ||
-                  selectedFile.name?.endsWith(".png")) && (
-                  <>
-                    <img
-                      src={selectedFile.url}
-                      style={{ maxWidth: "100%" }}
-                    />
-
-                    <button
-                      onClick={() => downloadFile(selectedFile)}
-                    >
-                      ⬇ Télécharger image
-                    </button>
-                  </>
-                )}
-
-              </div>
-            )}
+            {/* FILE VIEWER */}
+            {selectedFile && renderFile(selectedFile)}
 
             {/* LIST FILES */}
-            <div>
-              {files.map((file, i) => {
+            {files.map((f, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: 10,
+                  borderBottom: "1px solid #333",
+                  cursor: "pointer"
+                }}
+                onClick={() => setSelectedFile(f)}
+              >
+                {f.name}
+              </div>
+            ))}
 
-  const name = file.name?.toLowerCase() || "";
+          </div>
+        )}
 
-  const isAudio = name.endsWith(".mp3");
-  const isVideo = name.endsWith(".mp4") || name.endsWith(".mkv");
-  const isPdf = name.endsWith(".pdf");
-  const isText = name.endsWith(".txt");
-
-  const isDoc =
-    name.includes("conduite") ||
-    name.includes("fiche");
-
-  return (
-    <div key={i} className="songCard">
-
-      {/* NOM */}
-      <div
-        onClick={() => setSelectedFile(file)}
-        style={{ cursor: "pointer" }}
-      >
-        {file.name}
-      </div>
-
-      {/* AUDIO */}
-      {isAudio && (
-        <>
-          <audio controls src={file.url} />
-          <button onClick={() => downloadFile(file)}>
-            ⬇ MP3
-          </button>
-        </>
-      )}
-
-      {/* VIDEO */}
-      {isVideo && (
-        <>
-          <video controls src={file.url} width="100%" />
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Vidéo
-          </button>
-        </>
-      )}
-
-      {/* PDF / TEXTE / DOC */}
-      {(isPdf || isText || isDoc) && (
-        <>
-          <button onClick={() => window.open(file.url, "_blank")}>
-            📄 Ouvrir
-          </button>
-
-          <button onClick={() => downloadFile(file)}>
-            ⬇ Télécharger
-          </button>
-        </>
-      )}
-
+      </main>
     </div>
   );
-})}
+}
