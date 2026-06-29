@@ -5,8 +5,9 @@ const API =
 
 export default function App() {
   const [shows, setShows] = useState([]);
+  const [show, setShow] = useState(null);
   const [files, setFiles] = useState([]);
-  const [current, setCurrent] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     loadShows();
@@ -18,60 +19,106 @@ export default function App() {
     setShows(json || []);
   }
 
-  async function openShow(id) {
-    const res = await fetch(API + "?action=getFiles&show=" + id);
+  async function openShow(name) {
+    const res = await fetch(API + "?action=getFiles&show=" + name);
     const json = await res.json();
     setFiles(json || []);
-    setCurrent(id);
+    setShow(name);
+    setPreview(null);
   }
 
-  function getAudio(url) {
-    const id = url.match(/\/d\/([^/]+)/)?.[1];
-    return id
-      ? `https://drive.google.com/uc?export=download&id=${id}`
-      : url;
+  // 🔥 AUCUNE TRANSFORMATION (comme avant)
+  function getUrl(url) {
+    return url;
+  }
+
+  function render(file) {
+    const name = file.name.toLowerCase();
+    const url = getUrl(file.url);
+
+    // AUDIO
+    if (name.endsWith(".mp3")) {
+      return (
+        <audio controls src={url} style={{ width: "100%" }} />
+      );
+    }
+
+    // VIDEO
+    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
+      return (
+        <video controls src={url} style={{ width: "100%" }} />
+      );
+    }
+
+    // DOC / TEXTE / CONDUITE
+    if (
+      name.includes("conduite") ||
+      name.includes("fiche") ||
+      name.endsWith(".pdf") ||
+      name.endsWith(".txt")
+    ) {
+      return (
+        <iframe
+          src={url}
+          style={{ width: "100%", height: "600px" }}
+        />
+      );
+    }
+
+    return <div>Format non supporté</div>;
   }
 
   return (
     <div style={{ padding: 20 }}>
+
       <h2>MAGMA SHOW</h2>
 
-      {current ? (
-        <div>
-          <button onClick={() => { setCurrent(null); setFiles([]); }}>
-            ← Retour
-          </button>
-
-          {files.map((f, i) => (
-            <div key={i} style={{ marginBottom: 15 }}>
-              <div>{f.name}</div>
-
-              {f.mime?.includes("audio") && (
-                <audio controls src={getAudio(f.url)} />
-              )}
-
-              {f.mime?.includes("video") && (
-                <video controls src={f.url} width="300" />
-              )}
-
-              {(f.mime?.includes("document") ||
-                f.mime?.includes("google-apps")) && (
-                <iframe src={f.url} width="100%" height="400" />
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
+      {!show ? (
         shows.map((s, i) => (
           <div
             key={i}
-            onClick={() => openShow(s.id)}
-            style={{ padding: 10, cursor: "pointer" }}
+            onClick={() => openShow(s.name)}
+            style={{ cursor: "pointer", padding: 10 }}
           >
             🎭 {s.name}
           </div>
         ))
+      ) : (
+        <div>
+
+          <button onClick={() => setShow(null)}>
+            ← Retour
+          </button>
+
+          <h3>{show}</h3>
+
+          {preview && (
+            <div>
+              <h4>{preview.name}</h4>
+              {render(preview)}
+              <button onClick={() => setPreview(null)}>
+                Fermer
+              </button>
+            </div>
+          )}
+
+          {files.map((f, i) => (
+            <div
+              key={i}
+              onClick={() => setPreview(f)}
+              style={{
+                padding: 10,
+                borderBottom: "1px solid #444",
+                cursor: "pointer"
+              }}
+            >
+              {f.name}
+            </div>
+          ))}
+
+        </div>
       )}
+
     </div>
   );
 }
