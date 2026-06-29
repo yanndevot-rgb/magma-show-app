@@ -32,24 +32,38 @@ export default function App() {
     setPreview(null);
   }
 
+  // =========================
+  // 🔥 DRIVE SAFE URL FIX
+  // =========================
+  function getDirectUrl(url) {
+    if (!url) return "";
+
+    const match = url.match(/\/d\/([^/]+)/);
+    const id = match ? match[1] : null;
+
+    if (!id) return url;
+
+    return `https://drive.google.com/uc?export=download&id=${id}`;
+  }
+
+  // =========================
+  // DOWNLOAD SAFE
+  // =========================
   function downloadFile(file) {
     if (!file?.url) return;
 
-    const match = file.url.match(/\/d\/([^/]+)/);
-    const id = match ? match[1] : null;
-
-    if (!id) return alert("Lien invalide Drive");
-
-    const url =
-      "https://drive.google.com/uc?export=download&id=" + id;
-
+    const url = getDirectUrl(file.url);
     window.open(url, "_blank");
   }
 
+  // =========================
+  // RENDER PLAYER UNIFIÉ
+  // =========================
   function renderPreview(file) {
     if (!file) return null;
 
     const name = file.name?.toLowerCase();
+    const url = getDirectUrl(file.url);
 
     return (
       <div className="modal">
@@ -59,21 +73,21 @@ export default function App() {
 
           {/* AUDIO */}
           {name.endsWith(".mp3") && (
-            <audio controls src={file.url} style={{ width: "100%" }} />
+            <audio controls src={url} style={{ width: "100%" }} />
           )}
 
           {/* VIDEO */}
           {(name.endsWith(".mp4") || name.endsWith(".mkv")) && (
-            <video controls src={file.url} width="100%" />
+            <video controls src={url} width="100%" />
           )}
 
-          {/* PDF / TEXTE / CONDUITE / FICHE */}
+          {/* DOCS */}
           {(name.includes("conduite") ||
             name.includes("fiche") ||
             name.endsWith(".pdf") ||
             name.endsWith(".txt")) && (
             <iframe
-              src={file.url}
+              src={url}
               width="100%"
               height="500px"
               title="document"
@@ -82,7 +96,7 @@ export default function App() {
 
           {/* IMAGE */}
           {(name.endsWith(".jpg") || name.endsWith(".png")) && (
-            <img src={file.url} style={{ maxWidth: "100%" }} />
+            <img src={url} style={{ maxWidth: "100%" }} />
           )}
 
           <div style={{ marginTop: 10 }}>
