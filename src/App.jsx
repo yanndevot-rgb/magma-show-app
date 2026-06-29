@@ -1,165 +1,94 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API =
-  "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
+const API_URL =
+  "https://script.google.com/macros/s/AKfycby13kgMgiryaUlTI9gyMJB54TIw36s-VjWyPauhDw7x0hmPKZHlUdIvYFCvNvpwWNru/exec?action=getFiles&show=1MolA_1ha5qS8yOx55_cIo-KHdAYj28h4";
 
-export default function App() {
-  const [shows, setShows] = useState([]);
-  const [show, setShow] = useState(null);
+function App() {
   const [files, setFiles] = useState([]);
-  const [preview, setPreview] = useState(null);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
-    loadShows();
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(setFiles)
+      .catch(console.error);
   }, []);
 
-  async function loadShows() {
-    try {
-      const res = await fetch(API + "?action=getPrestations");
-      const json = await res.json();
-      setShows(json || []);
-    } catch (e) {
-      console.log("error shows", e);
-    }
-  }
-
-  async function openShow(name) {
-    try {
-      const res = await fetch(API + "?action=getFiles&show=" + name);
-      const json = await res.json();
-      setFiles(json || []);
-      setShow(name);
-      setPreview(null);
-    } catch (e) {
-      console.log("error files", e);
-    }
-  }
-
-  // 🔥 IMPORTANT : on ne transforme rien pour tester stabilité
-  function getUrl(url) {
-    return url;
-  }
-
   function renderFile(file) {
-    const name = file.name.toLowerCase();
-    const url = getUrl(file.url);
+    if (!file) return null;
 
-    // 🎧 MP3
-    if (name.endsWith(".mp3")) {
+    const url = file.url;
+
+    // AUDIO
+    if (file.mime?.includes("audio")) {
       return (
-        <audio controls style={{ width: "100%" }}>
-          <source src={url} type="audio/mpeg" />
-        </audio>
+        <div>
+          <h3>{file.name}</h3>
+          <audio controls src={url} style={{ width: "100%" }} />
+        </div>
       );
     }
 
-    // 🎬 VIDEO
-    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
+    // VIDEO
+    if (file.mime?.includes("video")) {
       return (
-        <video controls style={{ width: "100%" }}>
-          <source src={url} />
-        </video>
+        <div>
+          <h3>{file.name}</h3>
+          <video controls src={url} style={{ width: "100%" }} />
+        </div>
       );
     }
 
-    // 📄 TEXTE / PDF / CONDUITE
+    // GOOGLE DOC / PDF
     if (
-      name.includes("conduite") ||
-      name.includes("fiche") ||
-      name.endsWith(".pdf") ||
-      name.endsWith(".txt")
+      file.mime?.includes("document") ||
+      file.mime?.includes("pdf") ||
+      file.mime?.includes("google-apps")
     ) {
       return (
         <iframe
           src={url}
-          width="100%"
-          height="600px"
-          style={{ border: "none" }}
+          style={{ width: "100%", height: "600px" }}
         />
       );
     }
 
-    // 🖼 IMAGE
-    if (name.endsWith(".jpg") || name.endsWith(".png")) {
-      return <img src={url} style={{ maxWidth: "100%" }} />;
-    }
-
-    return <div>Format non supporté</div>;
+    return (
+      <div>
+        <a href={url} target="_blank">
+          Ouvrir
+        </a>
+      </div>
+    );
   }
 
   return (
-    <div className="app">
+    <div style={{ padding: 20 }}>
+      <h2>MAGMA SHOW</h2>
 
-      <aside className="sidebar">
-        <button onClick={() => setShow(null)}>
-          Spectacles
-        </button>
-
-        <button onClick={loadShows}>
-          Rafraîchir
-        </button>
-      </aside>
-
-      <main className="content">
-
-        {/* LISTE SHOWS */}
-        {!show && (
-          <div>
-            <h2>Spectacles</h2>
-
-            {shows.map((s, i) => (
-              <div
-                key={i}
-                onClick={() => openShow(s.name)}
-                style={{ cursor: "pointer", margin: 10 }}
-              >
-                🎭 {s.name}
-              </div>
-            ))}
+      {selected ? (
+        <div>
+          <button onClick={() => setSelected(null)}>← Retour</button>
+          {renderFile(selected)}
+        </div>
+      ) : (
+        files.map((f, i) => (
+          <div
+            key={i}
+            style={{
+              padding: 10,
+              borderBottom: "1px solid #ccc",
+              cursor: "pointer"
+            }}
+            onClick={() => setSelected(f)}
+          >
+            {f.name}
           </div>
-        )}
-
-        {/* FILES */}
-        {show && (
-          <div>
-
-            <button onClick={() => setShow(null)}>
-              ← Retour
-            </button>
-
-            <h2>{show}</h2>
-
-            {/* PREVIEW */}
-            {preview && (
-              <div style={{ marginBottom: 20 }}>
-                <h3>{preview.name}</h3>
-                {renderFile(preview)}
-                <button onClick={() => setPreview(null)}>
-                  Fermer
-                </button>
-              </div>
-            )}
-
-            {/* LIST */}
-            {files.map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: 10,
-                  borderBottom: "1px solid #444",
-                  cursor: "pointer"
-                }}
-                onClick={() => setPreview(f)}
-              >
-                {f.name}
-              </div>
-            ))}
-
-          </div>
-        )}
-
-      </main>
+        ))
+      )}
     </div>
   );
 }
+
+export default App;
