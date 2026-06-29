@@ -1,81 +1,45 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const FILES_API =
+const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
 export default function App() {
   const [shows, setShows] = useState([]);
   const [show, setShow] = useState(null);
   const [files, setFiles] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [currentAudio, setCurrentAudio] = useState(null);
 
   useEffect(() => {
     loadShows();
   }, []);
 
   async function loadShows() {
-    const res = await fetch(FILES_API + "?action=getPrestations");
+    const res = await fetch(API + "?action=getPrestations");
     const json = await res.json();
     setShows(json || []);
   }
 
   async function openShow(name) {
-    const res = await fetch(FILES_API + "?action=getFiles&show=" + name);
+    const res = await fetch(API + "?action=getFiles&show=" + name);
     const json = await res.json();
     setFiles(json || []);
     setShow(name);
-    setSelected(null);
   }
 
+  // 👉 transforme Drive link en lien lisible
   function getUrl(url) {
     const match = url?.match(/\/d\/([^/]+)/);
     const id = match ? match[1] : null;
+
     if (!id) return url;
+
     return `https://drive.google.com/uc?export=download&id=${id}`;
   }
 
-  function renderFile(file) {
-    const name = file.name.toLowerCase();
-    const url = getUrl(file.url);
-
-    // MP3
-    if (name.endsWith(".mp3")) {
-      return (
-        <div>
-          <audio controls src={url} style={{ width: "100%" }} />
-        </div>
-      );
-    }
-
-    // VIDEO
-    if (name.endsWith(".mp4") || name.endsWith(".mkv")) {
-      return (
-        <video controls src={url} style={{ width: "100%" }} />
-      );
-    }
-
-    // TEXT / CONDUITE / PDF
-    if (
-      name.endsWith(".txt") ||
-      name.includes("conduite") ||
-      name.includes("fiche") ||
-      name.endsWith(".pdf")
-    ) {
-      return (
-        <iframe
-          src={url}
-          style={{ width: "100%", height: "500px" }}
-        />
-      );
-    }
-
-    // IMAGE
-    if (name.endsWith(".jpg") || name.endsWith(".png")) {
-      return <img src={url} style={{ maxWidth: "100%" }} />;
-    }
-
-    return <p>Format non supporté</p>;
+  // 👉 détecte MP3
+  function isMp3(name) {
+    return name?.toLowerCase().endsWith(".mp3");
   }
 
   return (
@@ -84,10 +48,6 @@ export default function App() {
       <aside className="sidebar">
         <button onClick={() => setShow(null)}>
           Spectacles
-        </button>
-
-        <button onClick={loadShows}>
-          Rafraîchir
         </button>
       </aside>
 
@@ -118,35 +78,49 @@ export default function App() {
 
             <h2>{show}</h2>
 
-            {selected && (
-              <div className="preview">
-                <h3>{selected.name}</h3>
-
-                {renderFile(selected)}
-
-                <a href={getUrl(selected.url)} target="_blank">
-                  Télécharger
-                </a>
-
-                <button onClick={() => setSelected(null)}>
-                  Fermer
-                </button>
+            {/* 🔥 AUDIO PLAYER GLOBAL */}
+            {currentAudio && (
+              <div style={{ marginBottom: 20 }}>
+                <audio controls autoPlay src={currentAudio} />
               </div>
             )}
 
-            {files.map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  borderBottom: "1px solid #444",
-                  padding: 10,
-                  cursor: "pointer"
-                }}
-                onClick={() => setSelected(f)}
-              >
-                {f.name}
-              </div>
-            ))}
+            {files.map((f, i) => {
+              const url = getUrl(f.url);
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: 10,
+                    borderBottom: "1px solid #444",
+                    cursor: "pointer"
+                  }}
+                >
+                  <div>{f.name}</div>
+
+                  {/* 🔥 UNIQUEMENT MP3 LECTURE */}
+                  {isMp3(f.name) && (
+                    <button
+                      onClick={() => setCurrentAudio(url)}
+                      style={{ marginTop: 5 }}
+                    >
+                      ▶ Lire MP3
+                    </button>
+                  )}
+
+                  {/* DOWNLOAD SIMPLE */}
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ marginLeft: 10 }}
+                  >
+                    Télécharger
+                  </a>
+                </div>
+              );
+            })}
 
           </div>
         )}
