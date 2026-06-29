@@ -10,14 +10,35 @@ export default async function handler(req, res) {
   const response = await fetch(url);
 
   if (!response.ok) {
-    return res.status(500).send("error fetching file");
+    return res.status(500).send("drive error");
   }
-
-  const buffer = await response.arrayBuffer();
 
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "public, max-age=3600");
 
-  return res.send(Buffer.from(buffer));
+  // IMPORTANT: on pipe SANS buffer
+  const reader = response.body.getReader();
+
+  const stream = new ReadableStream({
+    start(controller) {
+      function push() {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(value);
+          push();
+        });
+      }
+      push();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "audio/mpeg",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 }
