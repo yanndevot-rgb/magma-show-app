@@ -4,24 +4,32 @@ const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
 export default function App() {
+  const [prestations, setPrestations] = useState([]);
   const [files, setFiles] = useState([]);
   const [current, setCurrent] = useState(null);
 
   useEffect(() => {
-    load();
+    loadPrestations();
   }, []);
 
-  async function load() {
-    const res = await fetch(`${API}?action=getFiles&show=ALL`);
+  async function loadPrestations() {
+    const res = await fetch(`${API}?action=getPrestations`);
     const json = await res.json();
+    setPrestations(Array.isArray(json) ? json : []);
+  }
+
+  async function openPrestation(name) {
+    const res = await fetch(
+      `${API}?action=getFiles&show=${encodeURIComponent(name)}`
+    );
+
+    const json = await res.json();
+
     setFiles(Array.isArray(json) ? json : []);
+    setCurrent(null);
   }
 
-  function isMp3(name = "") {
-    return name.toLowerCase().includes(".mp3");
-  }
-
-  function getDirectDrive(url = "") {
+  function getMp3Url(url) {
     try {
       const id = url.split("/d/")[1].split("/")[0];
       return `https://drive.google.com/uc?export=download&id=${id}`;
@@ -31,48 +39,43 @@ export default function App() {
   }
 
   return (
-    <div style={{ background: "#0b0716", minHeight: "100vh", color: "white", padding: 20 }}>
+    <div style={{ padding: 20, background: "#0b0716", minHeight: "100vh", color: "white" }}>
 
-      <h2>MP3 LIST</h2>
+      <h2>MAGMA SHOW</h2>
 
-      {/* PLAYER SIMPLE */}
-      {current && (
-        <div style={{
-          background: "#1a1430",
-          padding: 20,
-          borderRadius: 10,
-          marginBottom: 20
-        }}>
-          <h3>{current.name}</h3>
-
-          <audio controls autoPlay style={{ width: "100%" }}>
-            <source src={getDirectDrive(current.url)} />
-          </audio>
-
-          <button onClick={() => setCurrent(null)}>
-            Fermer
-          </button>
-        </div>
+      {/* LISTE SPECTACLES */}
+      {!files.length && (
+        <>
+          {prestations.map((p, i) => (
+            <div
+              key={i}
+              onClick={() => openPrestation(p.name)}
+              style={{ padding: 10, cursor: "pointer" }}
+            >
+              🎭 {p.name}
+            </div>
+          ))}
+        </>
       )}
 
       {/* LISTE MP3 */}
-      {files
-        .filter(f => isMp3(f.name))
-        .map((f, i) => (
-          <div
-            key={i}
-            onClick={() => setCurrent(f)}
-            style={{
-              padding: 10,
-              marginBottom: 8,
-              background: "#1a1430",
-              cursor: "pointer",
-              borderRadius: 8
-            }}
-          >
-            🎵 {f.name}
-          </div>
-        ))}
+      {files.length > 0 && (
+        <>
+          <button onClick={() => setFiles([])}>← Retour</button>
+
+          {files
+            .filter(f => f.name?.toLowerCase().includes(".mp3"))
+            .map((f, i) => (
+              <div key={i} style={{ marginBottom: 15 }}>
+                <div>{f.name}</div>
+
+                <audio controls style={{ width: "100%" }}>
+                  <source src={getMp3Url(f.url)} />
+                </audio>
+              </div>
+            ))}
+        </>
+      )}
     </div>
   );
 }
