@@ -1,44 +1,36 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const FILES_API =
+const API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
 export default function App() {
-  const [prestations, setPrestations] = useState([]);
-  const [selectedPrestation, setSelectedPrestation] = useState(null);
-
+  const [shows, setShows] = useState([]);
+  const [show, setShow] = useState(null);
   const [files, setFiles] = useState([]);
   const [preview, setPreview] = useState(null);
 
   useEffect(() => {
-    loadPrestations();
+    loadShows();
   }, []);
 
-  async function loadPrestations() {
-    const res = await fetch(FILES_API + "?action=getPrestations");
-    const json = await res.json();
-    setPrestations(json || []);
+  async function loadShows() {
+    const r = await fetch(API + "?action=getPrestations");
+    const j = await r.json();
+    setShows(j || []);
   }
 
-  async function openPrestation(name) {
-    const res = await fetch(
-      FILES_API + "?action=getFiles&show=" + name
-    );
-    const json = await res.json();
-
-    setFiles(json || []);
-    setSelectedPrestation(name);
+  async function openShow(name) {
+    const r = await fetch(API + "?action=getFiles&show=" + name);
+    const j = await r.json();
+    setFiles(j || []);
+    setShow(name);
     setPreview(null);
   }
 
-  // =========================
-  // 🔥 DRIVE SAFE URL FIX
-  // =========================
-  function getDirectUrl(url) {
-    if (!url) return "";
-
-    const match = url.match(/\/d\/([^/]+)/);
+  // 🔥 STREAM FIX MAGMA
+  function streamUrl(url) {
+    const match = url?.match(/\/d\/([^/]+)/);
     const id = match ? match[1] : null;
 
     if (!id) return url;
@@ -46,24 +38,15 @@ export default function App() {
     return `https://drive.google.com/uc?export=download&id=${id}`;
   }
 
-  // =========================
-  // DOWNLOAD SAFE
-  // =========================
-  function downloadFile(file) {
-    if (!file?.url) return;
-
-    const url = getDirectUrl(file.url);
-    window.open(url, "_blank");
+  function download(file) {
+    window.open(streamUrl(file.url), "_blank");
   }
 
-  // =========================
-  // RENDER PLAYER UNIFIÉ
-  // =========================
-  function renderPreview(file) {
+  function render(file) {
     if (!file) return null;
 
-    const name = file.name?.toLowerCase();
-    const url = getDirectUrl(file.url);
+    const name = file.name.toLowerCase();
+    const url = streamUrl(file.url);
 
     return (
       <div className="modal">
@@ -73,7 +56,7 @@ export default function App() {
 
           {/* AUDIO */}
           {name.endsWith(".mp3") && (
-            <audio controls src={url} style={{ width: "100%" }} />
+            <audio controls src={url} />
           )}
 
           {/* VIDEO */}
@@ -81,17 +64,12 @@ export default function App() {
             <video controls src={url} width="100%" />
           )}
 
-          {/* DOCS */}
+          {/* DOC */}
           {(name.includes("conduite") ||
             name.includes("fiche") ||
             name.endsWith(".pdf") ||
             name.endsWith(".txt")) && (
-            <iframe
-              src={url}
-              width="100%"
-              height="500px"
-              title="document"
-            />
+            <iframe src={url} width="100%" height="500px" />
           )}
 
           {/* IMAGE */}
@@ -99,15 +77,13 @@ export default function App() {
             <img src={url} style={{ maxWidth: "100%" }} />
           )}
 
-          <div style={{ marginTop: 10 }}>
-            <button onClick={() => downloadFile(file)}>
-              ⬇ Télécharger
-            </button>
+          <button onClick={() => download(file)}>
+            ⬇ Télécharger
+          </button>
 
-            <button onClick={() => setPreview(null)}>
-              Fermer
-            </button>
-          </div>
+          <button onClick={() => setPreview(null)}>
+            Fermer
+          </button>
 
         </div>
       </div>
@@ -117,75 +93,55 @@ export default function App() {
   return (
     <div className="app">
 
-      {/* SIDEBAR */}
       <aside className="sidebar">
-        <div style={{ color: "white", padding: 10 }}>
-          MAGMA SHOW
-        </div>
-
-        <button onClick={() => setSelectedPrestation(null)}>
+        <button onClick={() => setShow(null)}>
           Spectacles
         </button>
 
-        <button onClick={loadPrestations}>
+        <button onClick={loadShows}>
           Rafraîchir
         </button>
       </aside>
 
-      {/* MAIN */}
       <main className="content">
 
-        {/* HOME */}
-        {!selectedPrestation && (
+        {!show && (
           <div>
             <h2>Spectacles</h2>
 
-            {prestations.map((p, i) => (
+            {shows.map((s, i) => (
               <div
                 key={i}
-                onClick={() => openPrestation(p.name)}
-                style={{
-                  cursor: "pointer",
-                  padding: 12,
-                  borderBottom: "1px solid #333"
-                }}
+                onClick={() => openShow(s.name)}
               >
-                🎭 {p.name}
+                🎭 {s.name}
               </div>
             ))}
           </div>
         )}
 
-        {/* FILE VIEW */}
-        {selectedPrestation && (
+        {show && (
           <div>
 
-            <button onClick={() => setSelectedPrestation(null)}>
+            <button onClick={() => setShow(null)}>
               ← Retour
             </button>
 
-            <h2>{selectedPrestation}</h2>
+            <h2>{show}</h2>
 
-            {/* PREVIEW */}
-            {preview && renderPreview(preview)}
+            {preview && render(preview)}
 
-            {/* FILE LIST */}
             {files.map((f, i) => (
-              <div
-                key={i}
-                style={{
-                  padding: 10,
-                  borderBottom: "1px solid #333",
-                  cursor: "pointer"
-                }}
-              >
+              <div key={i} className="row">
+
                 <div onClick={() => setPreview(f)}>
                   {f.name}
                 </div>
 
-                <button onClick={() => downloadFile(f)}>
-                  ⬇ Download
+                <button onClick={() => download(f)}>
+                  Download
                 </button>
+
               </div>
             ))}
 
