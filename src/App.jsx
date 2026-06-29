@@ -7,194 +7,160 @@ const API_URL =
 const FILES_API =
   "https://script.google.com/macros/s/AKfycbwhoChGw1YqSJAubp1_XKUsGz_1Q4qKqlvfN3hLFoO1xMG8m4gJOeggyn3VOyHrTpBrYg/exec";
 
-function App() {
-  const [data, setData] = useState(null);
+export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [prestations, setPrestations] = useState([]);
   const [selectedPrestation, setSelectedPrestation] = useState(null);
+
   const [files, setFiles] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    loadData();
   }, []);
 
-  async function fetchData() {
+  async function loadData() {
     try {
       setLoading(true);
-      setError("");
 
-      const res = await fetch(API_URL);
-      const json = await res.json();
-
-      setData(json);
-
-      const presRes = await fetch(
+      const pres = await fetch(
         `${FILES_API}?action=getPrestations`
       );
+      const presJson = await pres.json();
 
-      if (presRes.ok) {
-        const presJson = await presRes.json();
-        setPrestations(presJson);
-      }
-    } catch (err) {
-      setError("Erreur de chargement : " + err.message);
+      setPrestations(presJson || []);
+    } catch (e) {
+      setError("Erreur chargement");
     } finally {
       setLoading(false);
     }
   }
 
-  async function openPrestation(folderId) {
+  async function openPrestation(name) {
     try {
-      const url = `${FILES_API}?action=getFiles&show=${folderId}`;
-      const res = await fetch(url);
+      const res = await fetch(
+        `${FILES_API}?action=getFiles&show=${name}`
+      );
       const json = await res.json();
 
-      setFiles(Array.isArray(json) ? json : []);
-      setSelectedPrestation(folderId);
-
-    } catch (err) {
-      console.error(err);
+      setFiles(json || []);
+      setSelectedPrestation(name);
+      setSelectedFile(null);
+    } catch (e) {
+      console.error(e);
     }
   }
 
-  // =========================
-  // DOWNLOAD MP3 FIXÉ
-  // =========================
-  const downloadMP3 = (file) => {
-    try {
-      if (!file || !file.url) return;
+  function downloadFile(file) {
+    if (!file?.url) return;
 
-      const match = file.url.match(/\/d\/([^/]+)/);
-      const fileId = match ? match[1] : null;
+    const match = file.url.match(/\/d\/([^/]+)/);
+    const id = match ? match[1] : null;
 
-      if (!fileId) {
-        alert("Lien Drive invalide");
-        return;
-      }
-
-      const downloadUrl =
-        `https://drive.google.com/uc?export=download&id=${fileId}`;
-
-      window.open(downloadUrl, "_blank");
-
-    } catch (err) {
-      console.error("MP3 download error", err);
+    if (!id) {
+      alert("Lien invalide");
+      return;
     }
-  };
+
+    const url = `https://drive.google.com/uc?export=download&id=${id}`;
+    window.open(url, "_blank");
+  }
+
+  if (loading) return <div>Chargement...</div>;
+  if (error) return <div>{error}</div>;
 
   return (
     <div className="app">
+
       <aside className="sidebar">
-        <div className="logoBlock">
-          <img src="/logo-magma.png" alt="Magma Show" className="logoImage" />
-        </div>
-
-        <nav className="nav">
-          <button
-            className="navBtn active"
-            onClick={() => {
-              setSelectedPrestation(null);
-              setFiles([]);
-            }}
-          >
-            Spectacles
-          </button>
-        </nav>
-
-        <button className="refreshBtn" onClick={fetchData}>
-          Rafraîchir
+        <button onClick={() => {
+          setSelectedPrestation(null);
+          setFiles([]);
+          setSelectedFile(null);
+        }}>
+          Spectacles
         </button>
       </aside>
 
       <main className="content">
-        {loading && <div>Chargement...</div>}
-        {error && <div>{error}</div>}
 
-        {!loading && !error && (
-          <>
-            {selectedPrestation ? (
-              <section className="panel fullPanel">
+        {/* LISTE SPECTACLES */}
+        {!selectedPrestation && (
+          <div>
+            <h2>Spectacles</h2>
+
+            {prestations.map((p, i) => (
+              <div
+                key={i}
+                onClick={() => openPrestation(p.name)}
+                style={{ cursor: "pointer", padding: 10 }}
+              >
+                🎭 {p.name}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* FICHIERS */}
+        {selectedPrestation && (
+          <div>
+
+            <button onClick={() => setSelectedPrestation(null)}>
+              ← Retour
+            </button>
+
+            <h2>{selectedPrestation}</h2>
+
+            {/* PLAYER + DOWNLOAD TOUJOURS VISIBLE */}
+            {selectedFile && (
+              <div style={{ marginBottom: 20 }}>
+
+                <h3>{selectedFile.name}</h3>
+
+                <audio
+                  controls
+                  src={selectedFile.url}
+                  style={{ width: "100%" }}
+                />
 
                 <button
-                  className="backBtn"
-                  onClick={() => {
-                    setSelectedPrestation(null);
-                    setFiles([]);
+                  onClick={() => downloadFile(selectedFile)}
+                  style={{
+                    marginTop: 10,
+                    padding: "10px 15px",
+                    background: "#d4af37",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer"
                   }}
                 >
-                  ← Retour
+                  ⬇ Télécharger MP3
                 </button>
 
-                <h2>{selectedPrestation}</h2>
-
-                {files.length === 0 ? (
-                  <p>Aucun fichier trouvé</p>
-                ) : (
-                  files.map((file, i) => (
-                    <div
-                      key={i}
-                      className="songCard"
-                      onClick={() => setSelectedFile(file)}
-                      style={{ cursor: "pointer", marginBottom: "10px" }}
-                    >
-                      <div className="songTitle">
-                        {file.name}
-                      </div>
-
-                      {/* ===================== */}
-                      {/* BOUTON DOWNLOAD MP3 */}
-                      {/* ===================== */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadMP3(file);
-                        }}
-                        style={{
-                          marginTop: "8px",
-                          padding: "6px 12px",
-                          background: "#d4af37",
-                          border: "none",
-                          borderRadius: "6px",
-                          cursor: "pointer"
-                        }}
-                      >
-                        🎧 Télécharger
-                      </button>
-                    </div>
-                  ))
-                )}
-
-              </section>
-            ) : (
-              <section className="panel fullPanel">
-
-                <h2>Liste des spectacles</h2>
-
-                {prestations.length === 0 ? (
-                  <p>Aucun spectacle trouvé</p>
-                ) : (
-                  prestations.map((item, i) => (
-                    <div
-                      key={i}
-                      className="songCard"
-                      onClick={() => openPrestation(item.name)}
-                      style={{ cursor: "pointer", marginBottom: "12px" }}
-                    >
-                      🎭 {item.name}
-                    </div>
-                  ))
-                )}
-
-              </section>
+              </div>
             )}
-          </>
+
+            {/* LISTE FILES */}
+            {files.map((f, i) => (
+              <div
+                key={i}
+                onClick={() => setSelectedFile(f)}
+                style={{
+                  padding: 10,
+                  cursor: "pointer",
+                  borderBottom: "1px solid #333"
+                }}
+              >
+                {f.name}
+              </div>
+            ))}
+
+          </div>
         )}
+
       </main>
     </div>
   );
 }
-
-export default App;
